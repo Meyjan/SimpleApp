@@ -5,8 +5,9 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
+require("dotenv").config();
 const jwt = require('./utils/jwt');
-const MongoClient = require('mongodb').MongoClient;
+const { MongoClient } = require('mongodb');
 
 const userRouter = require('./routers/userRouter');
 
@@ -37,9 +38,9 @@ app.get('/', (req, res) => {
 app.use('', userRouter);
 
 // Initiate
-MongoClient.connect(process.env.DB_URL, { useNewUrlParser: true, poolSize: 5 }, (err, database) => {
+MongoClient.connect(process.env.DB_URL, { useNewUrlParser: true, poolSize: 5, useUnifiedTopology: true }, (err, database) => {
   if (err) throw err;
-  db = database;
+  db = database.db();
 
   app.listen(PORT);
   console.log(`Running on port: ${PORT}`);

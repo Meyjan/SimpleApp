@@ -1,5 +1,5 @@
 // const bcrypt = require('bcrypt');
-const expressJwt = require('express-jwt');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const ResponseGenerator = require('../utils/responseGenerator');
 
@@ -11,7 +11,7 @@ findUser = (collection, username, callback) => {
     const query = { username: username };
     collection.findOne(query, (err, result) => {
         if (err) return callback(err);
-        callback(result);
+        callback(null, result);
     })
 }
 
@@ -27,7 +27,7 @@ module.exports = {
 
         if (username && password) {
             const collection = db.collection(userCollectionName);
-            findUser(collection, username, user, (err, result) => {
+            findUser(collection, username, (err, result) => {
                 if (err) throw err;
                 if (result) {
                     const validUser = comparePassword(result, password);
@@ -38,7 +38,7 @@ module.exports = {
                             role: result.role
                         };
 
-                        const token = expressJwt.sign(userData, jwtSecret);
+                        const token = jwt.sign(userData, jwtSecret);
                         const status = 200;
                         const response = {
                             status,
