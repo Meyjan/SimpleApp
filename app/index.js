@@ -6,13 +6,13 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const jwt = require('./utils/jwt');
-const mongoClient = require('mongodb').MongoClient;
+const MongoClient = require('mongodb').MongoClient;
 
 const userRouter = require('./routers/userRouter');
 
 // Constants
 const PORT = 3000;
-const HOST = '0.0.0.0';
+// const HOST = '0.0.0.0';
 const app = express();
 let db;
 
@@ -37,13 +37,11 @@ app.get('/', (req, res) => {
 app.use('', userRouter);
 
 // Initiate
-mongoClient.connect(process.env.DB_URL, (err, database) => {
-  if(err) {
-    throw err;
-  }
-  
+MongoClient.connect(process.env.DB_URL, { useNewUrlParser: true, poolSize: 5 }, (err, database) => {
+  if (err) throw err;
   db = database;
-  app.listen(PORT, HOST);
-  console.log(`Running on http://${HOST}:${PORT}`);
+
+  app.listen(PORT);
+  console.log(`Running on port: ${PORT}`);
 });
 
