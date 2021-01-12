@@ -10,7 +10,8 @@ router.post('/login', userController.login);
 router.post('/create', userController.create);
 
 // Read
-// router.get('/read/:userId', userController.read);
+router.get('/read', userController.read);
+router.get('/read/:username', userController.read);
 
 // Update
 // router.put('/update', userController.update);

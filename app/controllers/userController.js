@@ -15,7 +15,15 @@ findUser = (collection, username, callback) => {
     collection.findOne(query, (err, result) => {
         if (err) return callback(err);
         return callback(null, result);
-    })
+    });
+}
+
+findUsers = (collection, username, callback) => {
+    const query = { username: new RegExp(username, 'i')};
+    collection.find(query).toArray((err, result) => {
+        if (err) return callback(err);
+        return callback(null, result);
+    });
 }
 
 createUser = (collection, user, callback) => {
@@ -109,5 +117,19 @@ module.exports = {
         } else {
             ResponseGenerator(res, 401, "Unauthorized");
         }
+    },
+
+    read: (req, res) => {
+        const { params, db } = req;
+        let { username } = params;
+        const collection = db.collection(userCollectionName);
+
+        if (!username) username = '';
+        findUsers(collection, username, (err, result) => {
+            if (err) throw err;
+            
+            const statusCode = 200;
+            res.status(statusCode).json(result);
+        })
     }
 }
