@@ -68,7 +68,7 @@ updateUserById = (collection, id, newUser, callback) => {
 
 deleteUserById = (collection, id, callback) => {
     const query = { _id:  ObjectId(id) };
-    collection.remove(query, (err, result) => {
+    collection.deleteOne(query, (err, result) => {
         if (err) return callback(err);
         return callback(null, result);
     });
