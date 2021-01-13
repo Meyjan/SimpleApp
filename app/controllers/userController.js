@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const ResponseGenerator = require('../utils/responseGenerator');
 const e = require('express');
+const { ObjectId } = require('mongodb');
 
 const saltRounds = 10;
 const jwtSecret = process.env.JWT_SECRET;
@@ -10,8 +11,16 @@ const userCollectionName = 'users'
 const roleList = ['admin', 'user']
 
 // Async functions
-findUser = (collection, username, callback) => {
+findUserByUsername = (collection, username, callback) => {
     const query = { username: username };
+    collection.findOne(query, (err, result) => {
+        if (err) return callback(err);
+        return callback(null, result);
+    });
+}
+
+findUserById = (collection, id, callback) => {
+    const query = { _id:  ObjectId(id) };
     collection.findOne(query, (err, result) => {
         if (err) return callback(err);
         return callback(null, result);
@@ -40,6 +49,23 @@ createUser = (collection, user, callback) => {
     });
 }
 
+updateUserById = (collection, id, newUser, callback) => {
+    const { username, password, role } = newUser;
+    let newUserObj = {};
+    if (username) newUserObj.username = username;
+    if (password) newUserObj.password = bcrypt.hashSync(password, saltRounds);
+    if (role) newUserObj.role = role;
+
+    const query = { _id:  ObjectId(id) };
+    const updatedObj = { $set: newUserObj };
+    const upsert = { upsert: true };
+    
+    collection.updateOne(query, updatedObj, upsert, (err, result) => {
+        if (err) return callback(err);
+        return callback(null, result);
+    })
+}
+
 // Sync functions
 comparePassword = (user, password) => {
     const hashedPassword = user.password;
@@ -54,7 +80,7 @@ module.exports = {
 
         if (username && password) {
             const collection = db.collection(userCollectionName);
-            findUser(collection, username, (err, result) => {
+            findUserByUsername(collection, username, (err, result) => {
                 if (err) throw err;
                 if (result) {
                     const validUser = comparePassword(result, password);
@@ -99,7 +125,7 @@ module.exports = {
                     ResponseGenerator(res, 400, "Role invalid");
                 } else {
                     // Check if username exists
-                    findUser(collection, username, (err, result) => {
+                    findUserByUsername(collection, username, (err, result) => {
                         if (err) throw err;
                         if (result) {
                             ResponseGenerator(res, 400, "Username exists. Change for another username!");
@@ -131,5 +157,58 @@ module.exports = {
             const statusCode = 200;
             res.status(statusCode).json(result);
         })
+    },
+
+    readById: (req, res) => {
+        const { params, db } = req;
+        let { id } = params;
+        const collection = db.collection(userCollectionName);
+
+        if (id) {
+            findUserById(collection, id, (err, result) => {
+                if (err) throw err;
+                
+                const statusCode = 200;
+                res.status(statusCode).json(result);
+            })
+        } else {
+            ResponseGenerator(res, 400, "Id has to be not null");
+        }
+        
+    },
+
+    update: (req, res) => {
+        const { user, params, body, db } = req;
+        const { username, password, role } = body;
+        let { id } = params;
+
+        if (user.role === 'admin') {
+            if (username || password || role) {
+                // Check if user exists
+                const collection = db.collection(userCollectionName);
+
+                // Validating role list
+                if (!roleList.includes(role)) {
+                    ResponseGenerator(res, 400, "Role invalid");
+                } else {
+                    // Check if username exists
+                    findUserById(collection, id, (err, result) => {
+                        if (err) throw err;
+                        if (result) {
+                            updateUserById(collection, id, body, (err, result) => {
+                                if (err) throw err;
+                                ResponseGenerator(res, 200, "OK", body);
+                            });
+                        } else {
+                            ResponseGenerator(res, 400, "Id does not exist. Cannot update.");
+                        }
+                    });
+                }
+            } else {
+                ResponseGenerator(res, 400, "At least a username, a password, or a role has to exist");
+            }
+        } else {
+            ResponseGenerator(res, 401, "Unauthorized");
+        }
     }
 }

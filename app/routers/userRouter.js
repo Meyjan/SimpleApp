@@ -12,9 +12,10 @@ router.post('/create', userController.create);
 // Read
 router.get('/read', userController.read);
 router.get('/read/:username', userController.read);
+router.get('/readId/:id', userController.readById);
 
 // Update
-// router.put('/update', userController.update);
+router.put('/update/:id', userController.update);
 
 // Delete
 // router.delete('/delete/:userId', userController.delete);
