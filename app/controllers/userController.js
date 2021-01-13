@@ -66,6 +66,14 @@ updateUserById = (collection, id, newUser, callback) => {
     })
 }
 
+deleteUserById = (collection, id, callback) => {
+    const query = { _id:  ObjectId(id) };
+    collection.remove(query, (err, result) => {
+        if (err) return callback(err);
+        return callback(null, result);
+    });
+}
+
 // Sync functions
 comparePassword = (user, password) => {
     const hashedPassword = user.password;
@@ -173,8 +181,7 @@ module.exports = {
             })
         } else {
             ResponseGenerator(res, 400, "Id has to be not null");
-        }
-        
+        }  
     },
 
     update: (req, res) => {
@@ -209,6 +216,28 @@ module.exports = {
             }
         } else {
             ResponseGenerator(res, 401, "Unauthorized");
+        }
+    },
+
+    delete: (req, res) => {
+        const { params, db } = req;
+        let { id } = params;
+        const collection = db.collection(userCollectionName);
+
+        if (id) {
+            findUserById(collection, id, (err, result) => {
+                if (err) throw err;
+                if (result) {
+                    deleteUserById(collection, id, (err, result) => {
+                        if (err) throw err;
+                        ResponseGenerator(res, 200, "OK");
+                    });
+                } else {
+                    ResponseGenerator(res, 400, "Id does not exist. Cannot delete.");
+                }
+            })
+        } else {
+            ResponseGenerator(res, 400, "Id has to be not null");
         }
     }
 }

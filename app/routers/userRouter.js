@@ -18,6 +18,6 @@ router.get('/readId/:id', userController.readById);
 router.put('/update/:id', userController.update);
 
 // Delete
-// router.delete('/delete/:userId', userController.delete);
+router.delete('/delete/:id', userController.delete);
 
 module.exports = router;
