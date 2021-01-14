@@ -1,3 +1,22 @@
+# Load Balancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: simpleappservice
+spec:
+  selector:
+    app: simpleapp
+  ports:
+    - protocol: "TCP"
+      # From inside
+      port: 3001
+      # From outside
+      nodePort: 30001
+
+      # Target port inside kube
+      targetPort: 3000
+  type: LoadBalancer
+
 # Deployment
 apiVersion: apps/v1
 kind: Deployment
