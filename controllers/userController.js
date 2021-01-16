@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const ResponseGenerator = require('../utils/responseGenerator');
-const e = require('express');
+const dbConn = require('../utils/db');
 const { ObjectId } = require('mongodb');
 
 const saltRounds = 10;
@@ -74,6 +74,14 @@ deleteUserById = (collection, id, callback) => {
     });
 }
 
+findRefreshToken = (collection, user, callback) => {
+    
+}
+
+createRefreshToken = (collection, user, callback) => {
+    
+}
+
 // Sync functions
 comparePassword = (user, password) => {
     const hashedPassword = user.password;
@@ -83,10 +91,11 @@ comparePassword = (user, password) => {
 // Exported modules
 module.exports = {
     login: (req, res) => {
-        const { body, db } = req;
+        const { body } = req;
         const { username, password } = body;
 
         if (username && password) {
+            const db = dbConn();
             const collection = db.collection(userCollectionName);
             findUserByUsername(collection, username, (err, result) => {
                 if (err) throw err;
@@ -120,12 +129,13 @@ module.exports = {
     },
 
     create: (req, res) => {
-        const { user, body, db } = req;
+        const { user, body } = req;
         const { username, password, role } = body;
 
         if (user.role === 'admin') {
             if (username && password && role) {
                 // Check if user exists
+                const db = dbConn();
                 const collection = db.collection(userCollectionName);
 
                 // Validating role list
@@ -154,8 +164,8 @@ module.exports = {
     },
 
     read: (req, res) => {
-        const { params, db } = req;
-        let { username } = params;
+        let { username } = req.params;
+        const db = dbConn();
         const collection = db.collection(userCollectionName);
 
         if (!username) username = '';
@@ -168,8 +178,8 @@ module.exports = {
     },
 
     readById: (req, res) => {
-        const { params, db } = req;
-        let { id } = params;
+        let { id } = req.params;
+        const db = dbConn();
         const collection = db.collection(userCollectionName);
 
         if (id) {
@@ -185,13 +195,14 @@ module.exports = {
     },
 
     update: (req, res) => {
-        const { user, params, body, db } = req;
+        const { user, params, body } = req;
         const { username, password, role } = body;
         let { id } = params;
 
         if (user.role === 'admin') {
             if (username || password || role) {
                 // Check if user exists
+                const db = dbConn();
                 const collection = db.collection(userCollectionName);
 
                 // Validating role list
@@ -220,11 +231,12 @@ module.exports = {
     },
 
     delete: (req, res) => {
-        const { params, db } = req;
+        const { params } = req;
         let { id } = params;
-        const collection = db.collection(userCollectionName);
 
         if (id) {
+            const db = dbConn();
+            const collection = db.collection(userCollectionName);
             findUserById(collection, id, (err, result) => {
                 if (err) throw err;
                 if (result) {
@@ -239,5 +251,9 @@ module.exports = {
         } else {
             ResponseGenerator(res, 400, "Id has to be not null");
         }
+    },
+
+    refreshToken: (req, res) => {
+
     }
 }
