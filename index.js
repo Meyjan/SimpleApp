@@ -9,6 +9,7 @@ require("dotenv").config();
 const jwt = require('./utils/jwt');
 const userRouter = require('./routers/userRouter');
 const errorHandler = require('./utils/errorHandler');
+const ResponseGenerator = require('./utils/responseGenerator');
 
 // Constants
 const PORT = 3000;
@@ -28,6 +29,10 @@ app.get('/', (req, res) => {
 
 // Routes to controllers
 app.use('', userRouter);
+
+app.use((req, res, next) => {
+  ResponseGenerator(res, 404, 'Not Found');
+})
 
 // Initiate database and listen
 app.listen(PORT);

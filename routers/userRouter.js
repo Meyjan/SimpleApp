@@ -11,6 +11,7 @@ router.post('/create', userController.create);
 
 // Read
 router.get('/read', userController.read);
+router.get('/readId', userController.read);
 router.get('/read/:username', userController.read);
 router.get('/readId/:id', userController.readById);
 

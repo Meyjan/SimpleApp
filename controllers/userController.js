@@ -1,42 +1,49 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
+
 const ResponseGenerator = require('../utils/responseGenerator');
 const dbConn = require('../utils/db');
 const { ObjectId } = require('mongodb');
 
 const saltRounds = 10;
 const jwtSecret = process.env.JWT_SECRET;
-const userCollectionName = 'users'
+
+const userCollectionName = 'users';
+const refreshTokenCollectionName = 'refresh_tokens';
 
 const roleList = ['admin', 'user']
 const db = dbConn();
+const userCollection = db.collection(userCollectionName);
+const refreshTokenCollection = db.collection(refreshTokenCollectionName);
 
 // Async functions
-findUserByUsername = (collection, username, callback) => {
+findUserByUsername = (username, callback) => {
     const query = { username: username };
-    collection.findOne(query, (err, result) => {
+
+    userCollection.findOne(query, (err, result) => {
         if (err) return callback(err);
         return callback(null, result);
     });
 }
 
-findUserById = (collection, id, callback) => {
+findUserById = (id, callback) => {
     const query = { _id:  ObjectId(id) };
-    collection.findOne(query, (err, result) => {
+    userCollection.findOne(query, (err, result) => {
         if (err) return callback(err);
         return callback(null, result);
     });
 }
 
-findUsers = (collection, username, callback) => {
+findUsers = (username, callback) => {
     const query = { username: new RegExp(username, 'i')};
-    collection.find(query).toArray((err, result) => {
+    userCollection.find(query).toArray((err, result) => {
         if (err) return callback(err);
         return callback(null, result);
     });
 }
 
-createUser = (collection, user, callback) => {
+createUser = (user, callback) => {
     const { username, password, role } = user;
     const hashedPassword = bcrypt.hashSync(password, saltRounds);
     const obj = {
@@ -44,13 +51,13 @@ createUser = (collection, user, callback) => {
         password: hashedPassword,
         role: role
     }
-    collection.insertOne(obj, (err, result) => {
+    userCollection.insertOne(obj, (err, result) => {
         if (err) return callback(err);
         return callback(null, result);
     });
 }
 
-updateUserById = (collection, id, newUser, callback) => {
+updateUserById = (id, newUser, callback) => {
     const { username, password, role } = newUser;
     let newUserObj = {};
     if (username) newUserObj.username = username;
@@ -61,25 +68,25 @@ updateUserById = (collection, id, newUser, callback) => {
     const updatedObj = { $set: newUserObj };
     const upsert = { upsert: true };
     
-    collection.updateOne(query, updatedObj, upsert, (err, result) => {
+    userCollection.updateOne(query, updatedObj, upsert, (err, result) => {
         if (err) return callback(err);
         return callback(null, result);
     })
 }
 
-deleteUserById = (collection, id, callback) => {
+deleteUserById = (id, callback) => {
     const query = { _id:  ObjectId(id) };
-    collection.deleteOne(query, (err, result) => {
+    userCollection.deleteOne(query, (err, result) => {
         if (err) return callback(err);
         return callback(null, result);
     });
 }
 
-findRefreshToken = (collection, user, callback) => {
+findRefreshToken = (user, callback) => {
     
 }
 
-createRefreshToken = (collection, user, callback) => {
+createRefreshToken = (user, callback) => {
     
 }
 
@@ -89,15 +96,17 @@ comparePassword = (user, password) => {
     return bcrypt.compareSync(password, hashedPassword);
 }
 
+generateRandomToken = () => {
+    return crypto.randomBytes(30).toString('hex');
+}
+
 // Exported modules
 module.exports = {
     login: (req, res) => {
-        const { body } = req;
-        const { username, password } = body;
+        const { username, password } = req.body;
 
         if (username && password) {
-            const collection = db.collection(userCollectionName);
-            findUserByUsername(collection, username, (err, result) => {
+            findUserByUsername(username, (err, result) => {
                 if (err) throw err;
                 if (result) {
                     const validUser = comparePassword(result, password);
@@ -134,20 +143,17 @@ module.exports = {
 
         if (user.role === 'admin') {
             if (username && password && role) {
-                // Check if user exists
-                const collection = db.collection(userCollectionName);
-
                 // Validating role list
                 if (!roleList.includes(role)) {
                     ResponseGenerator(res, 400, "Role invalid");
                 } else {
                     // Check if username exists
-                    findUserByUsername(collection, username, (err, result) => {
+                    findUserByUsername(username, (err, result) => {
                         if (err) throw err;
                         if (result) {
                             ResponseGenerator(res, 400, "Username exists. Change for another username!");
                         } else {
-                            createUser(collection, body, (err, result) => {
+                            createUser(body, (err, result) => {
                                 if (err) throw err;
                                 ResponseGenerator(res, 200, "OK");
                             });
@@ -164,10 +170,9 @@ module.exports = {
 
     read: (req, res) => {
         let { username } = req.params;
-        const collection = db.collection(userCollectionName);
 
         if (!username) username = '';
-        findUsers(collection, username, (err, result) => {
+        findUsers(username, (err, result) => {
             if (err) throw err;
             
             const statusCode = 200;
@@ -177,12 +182,10 @@ module.exports = {
 
     readById: (req, res) => {
         let { id } = req.params;
-        const collection = db.collection(userCollectionName);
 
         if (id) {
-            findUserById(collection, id, (err, result) => {
+            findUserById(id, (err, result) => {
                 if (err) throw err;
-                
                 const statusCode = 200;
                 res.status(statusCode).json(result);
             })
@@ -198,20 +201,25 @@ module.exports = {
 
         if (user.role === 'admin') {
             if (username || password || role) {
-                // Check if user exists
-                const collection = db.collection(userCollectionName);
-
                 // Validating role list
                 if (!roleList.includes(role)) {
                     ResponseGenerator(res, 400, "Role invalid");
                 } else {
                     // Check if username exists
-                    findUserById(collection, id, (err, result) => {
+                    findUserById(id, (err, result) => {
                         if (err) throw err;
                         if (result) {
-                            updateUserById(collection, id, body, (err, result) => {
+                            // Check if username exists
+                            findUserByUsername(username, (err, result) => {
                                 if (err) throw err;
-                                ResponseGenerator(res, 200, "OK", body);
+                                if (result) {
+                                    ResponseGenerator(res, 400, "Username exists. Change for another username!");
+                                } else {
+                                    updateUserById(id, body, (err, result) => {
+                                        if (err) throw err;
+                                        ResponseGenerator(res, 200, "OK", body);
+                                    });
+                                }
                             });
                         } else {
                             ResponseGenerator(res, 400, "Id does not exist. Cannot update.");
@@ -227,15 +235,13 @@ module.exports = {
     },
 
     delete: (req, res) => {
-        const { params } = req;
-        let { id } = params;
+        let { id } = req.params;
 
         if (id) {
-            const collection = db.collection(userCollectionName);
-            findUserById(collection, id, (err, result) => {
+            findUserById(id, (err, result) => {
                 if (err) throw err;
                 if (result) {
-                    deleteUserById(collection, id, (err, result) => {
+                    deleteUserById(id, (err, result) => {
                         if (err) throw err;
                         ResponseGenerator(res, 200, "OK");
                     });
@@ -249,6 +255,5 @@ module.exports = {
     },
 
     refreshToken: (req, res) => {
-
     }
 }
