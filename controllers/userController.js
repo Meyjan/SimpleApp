@@ -139,6 +139,27 @@ generateRandomToken = () => {
     return crypto.randomBytes(30).toString('hex');
 }
 
+validatePassword = (password) => {
+    const validateLowerCase = /[a-z]/g;
+    const validateUpperCase = /[A-Z]/g;
+    const validateNumbers = /[0-9]/g;
+
+    if (password.length >= 8) {
+        if (!password.match(validateLowerCase)) {
+            return 'Password has to contain at least 1 lowercase';
+        }
+        if (!password.match(validateUpperCase)) {
+            return 'Password has to contain at least 1 uppercase';
+        }
+        if (!password.match(validateNumbers)) {
+            return 'Password has to contain at least 1 number';
+        }
+        return null;
+    } else {
+        return 'Password length has to be at least 8 characters';
+    }
+}
+
 // Exported modules
 module.exports = {
     login: (req, res) => {
@@ -192,6 +213,10 @@ module.exports = {
                 if (!roleList.includes(role)) {
                     ResponseGenerator(res, 400, "Role invalid");
                 } else {
+                    const passwordCheck = validatePassword(password);
+                    if (passwordCheck) {
+                        return ResponseGenerator(res, 400, passwordCheck);
+                    }
                     // Check if username exists
                     findUserByUsername(username, (err, result) => {
                         if (err) throw err;
@@ -250,6 +275,12 @@ module.exports = {
                 if (!roleList.includes(role)) {
                     ResponseGenerator(res, 400, "Role invalid");
                 } else {
+                    if (password) {
+                        const passwordCheck = validatePassword(password);
+                        if (passwordCheck) {
+                            return ResponseGenerator(res, 400, passwordCheck);
+                        }
+                    }
                     // Check if username exists
                     findUserById(id, (err, result) => {
                         if (err) throw err;
