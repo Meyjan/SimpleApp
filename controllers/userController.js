@@ -9,6 +9,7 @@ const jwtSecret = process.env.JWT_SECRET;
 const userCollectionName = 'users'
 
 const roleList = ['admin', 'user']
+const db = dbConn();
 
 // Async functions
 findUserByUsername = (collection, username, callback) => {
@@ -95,7 +96,6 @@ module.exports = {
         const { username, password } = body;
 
         if (username && password) {
-            const db = dbConn();
             const collection = db.collection(userCollectionName);
             findUserByUsername(collection, username, (err, result) => {
                 if (err) throw err;
@@ -135,7 +135,6 @@ module.exports = {
         if (user.role === 'admin') {
             if (username && password && role) {
                 // Check if user exists
-                const db = dbConn();
                 const collection = db.collection(userCollectionName);
 
                 // Validating role list
@@ -165,7 +164,6 @@ module.exports = {
 
     read: (req, res) => {
         let { username } = req.params;
-        const db = dbConn();
         const collection = db.collection(userCollectionName);
 
         if (!username) username = '';
@@ -179,7 +177,6 @@ module.exports = {
 
     readById: (req, res) => {
         let { id } = req.params;
-        const db = dbConn();
         const collection = db.collection(userCollectionName);
 
         if (id) {
@@ -202,7 +199,6 @@ module.exports = {
         if (user.role === 'admin') {
             if (username || password || role) {
                 // Check if user exists
-                const db = dbConn();
                 const collection = db.collection(userCollectionName);
 
                 // Validating role list
@@ -235,7 +231,6 @@ module.exports = {
         let { id } = params;
 
         if (id) {
-            const db = dbConn();
             const collection = db.collection(userCollectionName);
             findUserById(collection, id, (err, result) => {
                 if (err) throw err;
