@@ -21,4 +21,8 @@ router.put('/update/:id', userController.update);
 // Delete
 router.delete('/delete/:id', userController.delete);
 
+// Refresh token
+router.get('/getRefresh', userController.getRefreshToken);
+router.post('/refresh', userController.refreshAccessToken);
+
 module.exports = router;

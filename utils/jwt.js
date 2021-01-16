@@ -5,7 +5,8 @@ module.exports = () => {
     return expressJwt({ secret, algorithms: ['sha1', 'RS256', 'HS256'] }).unless ({
         path: [
             "/",
-            "/login"
+            "/login",
+            "/refresh"
         ]
     })
 }

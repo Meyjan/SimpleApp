@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
@@ -9,13 +10,17 @@ const { ObjectId } = require('mongodb');
 const saltRounds = 10;
 const jwtSecret = process.env.JWT_SECRET;
 
-const userCollectionName = 'users';
-const refreshTokenCollectionName = 'refresh_tokens';
+const userCollectionName = process.env.USER_COLLECTION_NAME;
+const refreshTokenCollectionName = process.env.REFRESH_TOKEN_COLLECTION_NAME;
 
 const roleList = ['admin', 'user']
-const db = dbConn();
+const db = dbConn.conn();
 const userCollection = db.collection(userCollectionName);
 const refreshTokenCollection = db.collection(refreshTokenCollectionName);
+
+const accessTokenDuration = parseInt(process.env.JWT_DURATION);
+const refreshTokenSchema = dbConn.getRefreshTokenSchema();
+const RefreshTokenModel = db.model(refreshTokenCollectionName, refreshTokenSchema);
 
 // Async functions
 findUserByUsername = (username, callback) => {
@@ -82,12 +87,46 @@ deleteUserById = (id, callback) => {
     });
 }
 
-findRefreshToken = (user, callback) => {
-    
+findRefreshToken = (token, callback) => {
+    const query = { token: token };
+    refreshTokenCollection.findOne(query, (err, result) => {
+        if (err) return callback(err);
+        return callback(null, result);
+    })
 }
 
 createRefreshToken = (user, callback) => {
-    
+    const randomToken = generateRandomToken();
+    const userId = user._id;
+
+    const tempUser = { userid: userId };
+    let savedToken;
+
+    findRefreshTokenUser(tempUser, (err, result) => {
+        if (err) return callback(err);
+        if (result) {
+            const existingId = result._id;
+            savedToken = new RefreshTokenModel({ _id: existingId, token: randomToken, userId: userId })
+            savedToken.isNew = false;
+        } else {
+            savedToken = new RefreshTokenModel({ token: randomToken, userId: userId })
+        }
+
+        savedToken.save((err, result) => {
+            if (err) return callback(err);
+            return callback(null, randomToken);
+        })
+    })
+}
+
+findRefreshTokenUser = (user, callback) => {
+    const userId = user.userid;
+    const query = { userId: userId };
+
+    RefreshTokenModel.findOne(query, (err, result) => {
+        if (err) return callback (err);
+        return callback(null, result);
+    })
 }
 
 // Sync functions
@@ -111,20 +150,26 @@ module.exports = {
                 if (result) {
                     const validUser = comparePassword(result, password);
                     if (validUser) {
-                        const userData = {
-                            userid: result._id,
-                            username: result.username,
-                            role: result.role
-                        };
+                        createRefreshToken(result, (err, result_token) => {
+                            if (err) throw err;
+                            let userData = {
+                                userid: result._id,
+                                username: result.username,
+                                role: result.role,
+                            };
 
-                        const token = jwt.sign(userData, jwtSecret);
-                        const status = 200;
-                        const response = {
-                            status,
-                            token
-                        };
-                        res.status(status).json(response);
-                        
+                            const token = jwt.sign(userData, jwtSecret, { expiresIn: accessTokenDuration });
+                            const status = 200;
+
+                            userData.accessToken = token;
+                            userData.refreshToken = result_token;
+
+                            const response = {
+                                status,
+                                userData
+                            };
+                            res.status(status).json(response);
+                        });                        
                     } else {
                         ResponseGenerator(res, 401, "Password is not correct");
                     }
@@ -235,25 +280,88 @@ module.exports = {
     },
 
     delete: (req, res) => {
-        let { id } = req.params;
+        const { user, params } = req;
+        let { id } = params;
 
-        if (id) {
-            findUserById(id, (err, result) => {
-                if (err) throw err;
-                if (result) {
-                    deleteUserById(id, (err, result) => {
-                        if (err) throw err;
-                        ResponseGenerator(res, 200, "OK");
-                    });
-                } else {
-                    ResponseGenerator(res, 400, "Id does not exist. Cannot delete.");
-                }
-            })
+        if (user.role === 'admin') {
+            if (id) {
+                findUserById(id, (err, result) => {
+                    if (err) throw err;
+                    if (result) {
+                        deleteUserById(id, (err, result) => {
+                            if (err) throw err;
+                            ResponseGenerator(res, 200, "OK");
+                        });
+                    } else {
+                        ResponseGenerator(res, 400, "Id does not exist. Cannot delete.");
+                    }
+                })
+            } else {
+                ResponseGenerator(res, 400, "Id has to be not null");
+            }
         } else {
-            ResponseGenerator(res, 400, "Id has to be not null");
+            ResponseGenerator(res, 401, "Unauthorized");
         }
     },
 
-    refreshToken: (req, res) => {
+    getRefreshToken: (req, res) => {
+        findRefreshTokenUser(req.user, (err, result) => {
+            if (err) throw err;
+            if (result) {
+                ResponseGenerator(res, 200, "OK", result);
+            } else {
+                ResponseGenerator(res, 404, "Not Found");
+            }
+        });
+    },
+
+    refreshAccessToken: (req, res) => {
+        const { refreshToken, username } = req.body;
+
+        if (refreshToken && username) {
+            findUserByUsername(username, (err, result) => {
+                if (err) return err;
+                if (result) {
+                    let tempUser = result;
+                    tempUser.userid = result._id;
+                    findRefreshTokenUser(tempUser, (err, resultToken) => {
+                        if (err) throw err;
+                        if (resultToken) {
+                            const dbRefreshToken = resultToken.token;
+                            if (refreshToken === dbRefreshToken) {
+                                createRefreshToken(result, (err, result_token) => {
+                                    if (err) throw err;
+                                    let userData = {
+                                        userid: result._id,
+                                        username: result.username,
+                                        role: result.role,
+                                    };
+        
+                                    const token = jwt.sign(userData, jwtSecret, { expiresIn: accessTokenDuration });
+                                    const status = 200;
+        
+                                    userData.accessToken = token;
+                                    userData.refreshToken = result_token;
+        
+                                    const response = {
+                                        status,
+                                        userData
+                                    };
+                                    res.status(status).json(response);
+                                });
+                            } else {
+                                ResponseGenerator(res, 401, "Unauthorized refresh token.")
+                            }
+                        } else {
+                            ResponseGenerator(res, 404, "User does not have refresh token active.");
+                        }
+                    });
+                } else {
+                    ResponseGenerator(res, 400, 'User does not exist');
+                }
+            });
+        } else {
+            ResponseGenerator(res, 400, 'Need refresh token and username in body');
+        }
     }
 }
