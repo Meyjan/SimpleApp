@@ -25,4 +25,7 @@ router.delete('/delete/:id', userController.delete);
 router.get('/getRefresh', userController.getRefreshToken);
 router.post('/refresh', userController.refreshAccessToken);
 
+// Go error
+router.get('/error', userController.goError);
+
 module.exports = router;

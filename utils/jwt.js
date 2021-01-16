@@ -6,7 +6,8 @@ module.exports = () => {
         path: [
             "/",
             "/login",
-            "/refresh"
+            "/refresh",
+            "/error"
         ]
     })
 }

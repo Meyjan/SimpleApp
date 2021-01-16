@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
@@ -162,7 +161,7 @@ validatePassword = (password) => {
 
 // Exported modules
 module.exports = {
-    login: (req, res) => {
+    login: (req, res, next) => {
         const { username, password } = req.body;
 
         if (username && password) {
@@ -203,7 +202,7 @@ module.exports = {
         }
     },
 
-    create: (req, res) => {
+    create: (req, res, next) => {
         const { user, body } = req;
         const { username, password, role } = body;
 
@@ -238,7 +237,7 @@ module.exports = {
         }
     },
 
-    read: (req, res) => {
+    read: (req, res, next) => {
         let { username } = req.params;
 
         if (!username) username = '';
@@ -250,7 +249,7 @@ module.exports = {
         })
     },
 
-    readById: (req, res) => {
+    readById: (req, res, next) => {
         let { id } = req.params;
 
         if (id) {
@@ -264,7 +263,7 @@ module.exports = {
         }  
     },
 
-    update: (req, res) => {
+    update: (req, re, next) => {
         const { user, params, body } = req;
         const { username, password, role } = body;
         let { id } = params;
@@ -310,7 +309,7 @@ module.exports = {
         }
     },
 
-    delete: (req, res) => {
+    delete: (req, res, next) => {
         const { user, params } = req;
         let { id } = params;
 
@@ -335,7 +334,7 @@ module.exports = {
         }
     },
 
-    getRefreshToken: (req, res) => {
+    getRefreshToken: (req, res, next) => {
         findRefreshTokenUser(req.user, (err, result) => {
             if (err) throw err;
             if (result) {
@@ -346,12 +345,12 @@ module.exports = {
         });
     },
 
-    refreshAccessToken: (req, res) => {
+    refreshAccessToken: (req, res, next) => {
         const { refreshToken, username } = req.body;
 
         if (refreshToken && username) {
             findUserByUsername(username, (err, result) => {
-                if (err) return err;
+                if (err) return next(err);
                 if (result) {
                     let tempUser = result;
                     tempUser.userid = result._id;
@@ -394,5 +393,9 @@ module.exports = {
         } else {
             ResponseGenerator(res, 400, 'Need refresh token and username in body');
         }
+    },
+
+    goError: (req, res, next) => {
+        next(req);
     }
 }

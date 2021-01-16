@@ -4,6 +4,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const methodOverride = require('method-override')
 
 require("dotenv").config();
 const jwt = require('./utils/jwt');
@@ -20,7 +21,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cors());
 app.use(jwt());
-app.use(errorHandler);
 
 // Normal connection
 app.get('/', (req, res) => {
@@ -33,6 +33,9 @@ app.use('', userRouter);
 app.use((req, res, next) => {
   ResponseGenerator(res, 404, 'Not Found');
 })
+
+app.use(methodOverride())
+app.use(errorHandler);
 
 // Initiate database and listen
 app.listen(PORT);
