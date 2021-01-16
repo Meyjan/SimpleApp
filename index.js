@@ -4,13 +4,12 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { MongoClient } = require('mongodb');
 
 require("dotenv").config();
 const jwt = require('./utils/jwt');
-const { MongoClient } = require('mongodb');
-
 const userRouter = require('./routers/userRouter');
-const ResponseGenerator = require('./utils/responseGenerator');
+const errorHandler = require('./utils/errorHandler');
 
 // Constants
 const PORT = 3000;
@@ -18,18 +17,12 @@ const PORT = 3000;
 const app = express();
 let db;
 
-// Library middleware
+// Middlewares
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cors());
 app.use(jwt());
-
-// Handling error from jwt authorization
-app.use((err, req, res, next) => {
-  if (err.name === 'UnauthorizedError') {
-    ResponseGenerator(res, 401, 'Unauthorized');
-  }
-});
+app.use(errorHandler);
 
 // Passing spawned database connection to controller
 app.use((req, res, next) => {
