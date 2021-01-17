@@ -263,7 +263,7 @@ module.exports = {
         }  
     },
 
-    update: (req, re, next) => {
+    update: (req, res, next) => {
         const { user, params, body } = req;
         const { username, password, role } = body;
         let { id } = params;
