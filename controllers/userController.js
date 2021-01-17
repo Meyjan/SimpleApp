@@ -287,7 +287,7 @@ module.exports = {
                             // Check if username exists
                             findUserByUsername(username, (err, result) => {
                                 if (err) throw err;
-                                if (result) {
+                                if (result && body.username !== result.username) {
                                     ResponseGenerator(res, 400, "Username exists. Change for another username!");
                                 } else {
                                     updateUserById(id, body, (err, result) => {
