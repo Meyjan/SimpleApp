@@ -35,5 +35,9 @@ Read process diagram given by user to enable user to get informations about all 
 Diagram of process to get a new authentication token to users that have login and the refresh token has not expired. 
 ![Refresh_Token_Diagram](architecture_diagram/Refresh_Token_Flow.png)
 
+## Deployment
+This application is deployed on AWS using Kops. The deployed pods and services are as followed.
+![Deployment](kubernetes/kubectl.png)
+
 
 
