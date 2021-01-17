@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: simpleapp
-        image: meyjan/simple-app:v2
+        image: meyjan/simpleapp:latest
         ports:
         - containerPort: 3000
